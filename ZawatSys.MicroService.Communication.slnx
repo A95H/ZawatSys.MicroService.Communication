@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/ZawatSys.MicroService.Communication.Application/ZawatSys.MicroService.Communication.Application.csproj" />
+  <Project Path="src/ZawatSys.MicroService.Communication.Infrastructure/ZawatSys.MicroService.Communication.Infrastructure.csproj" />
+  <Project Path="src/ZawatSys.MicroService.Communication.Api/ZawatSys.MicroService.Communication.Api.csproj" />
+  <Project Path="../tests/ZawatSys.MicroService.Communication.Api.Tests/ZawatSys.MicroService.Communication.Api.Tests.csproj" />
+</Solution>
