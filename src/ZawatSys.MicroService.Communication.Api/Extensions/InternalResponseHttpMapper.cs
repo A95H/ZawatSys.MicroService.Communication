@@ -24,6 +24,8 @@ public static class InternalResponseHttpMapper
 
             CommunicationMessageCodes.STALE_CONTROL_CONFLICT => StatusCodes.Status409Conflict,
             CommunicationMessageCodes.IDEMPOTENCY_CONFLICT => StatusCodes.Status409Conflict,
+            CommunicationMessageCodes.REPLAY_REJECTED => StatusCodes.Status409Conflict,
+            CommunicationMessageCodes.THROTTLED => StatusCodes.Status429TooManyRequests,
             CommunicationMessageCodes.UNAUTHORIZED => StatusCodes.Status401Unauthorized,
 
             _ when msgCode.Contains("VALIDATION", StringComparison.OrdinalIgnoreCase)
@@ -34,8 +36,12 @@ public static class InternalResponseHttpMapper
                 => StatusCodes.Status409Conflict,
             _ when msgCode.Contains("IDEMPOTENCY", StringComparison.OrdinalIgnoreCase)
                 => StatusCodes.Status409Conflict,
+            _ when msgCode.Contains("REPLAY", StringComparison.OrdinalIgnoreCase)
+                => StatusCodes.Status409Conflict,
             _ when msgCode.Contains("CONFLICT", StringComparison.OrdinalIgnoreCase)
                 => StatusCodes.Status409Conflict,
+            _ when msgCode.Contains("THROTTLED", StringComparison.OrdinalIgnoreCase)
+                => StatusCodes.Status429TooManyRequests,
             _ when msgCode.Contains("UNAUTHORIZED", StringComparison.OrdinalIgnoreCase)
                 => StatusCodes.Status401Unauthorized,
 

@@ -157,7 +157,7 @@ public sealed class ConversationSessionConfiguration : IEntityTypeConfiguration<
 
         builder.HasIndex(e => new { e.TenantId, e.ExternalIdentityBindingId })
             .IsUnique()
-            .HasFilter("\"ClosedAt\" IS NULL")
+            .HasFilter("\"ClosedAt\" IS NULL AND NOT \"IsDeleted\"")
             .HasDatabaseName("UX_ConversationSessions_Tenant_ExternalIdentityBinding_Active");
 
         builder.HasIndex(e => new { e.TenantId, e.SessionStatus, e.LastInboundMessageAt })

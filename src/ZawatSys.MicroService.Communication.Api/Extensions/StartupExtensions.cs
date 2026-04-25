@@ -1,12 +1,21 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using ZawatSys.MicroService.Communication.Api.HealthChecks;
 using ZawatSys.MicroLib.Communication.Extensions;
 using ZawatSys.MicroService.Communication.Api.Exceptions;
+using ZawatSys.MicroService.Communication.Api.Routing;
 using ZawatSys.MicroService.Communication.Api.Services;
+using ZawatSys.MicroService.Communication.Api.Services.Webhooks;
+using ZawatSys.MicroService.Communication.Application.Control;
 using ZawatSys.MicroService.Communication.Application.Extensions;
 using ZawatSys.MicroService.Communication.Application.Services;
 using ZawatSys.MicroService.Communication.Infrastructure.Extensions;
@@ -15,6 +24,8 @@ namespace ZawatSys.MicroService.Communication.Api.Extensions;
 
 public static class StartupExtensions
 {
+    private static readonly string[] PermissionClaimTypes = ["permission", "permissions", "scope", "scp"];
+
     /// <summary>
     /// Registers Communication host dependencies.
     ///
@@ -66,6 +77,13 @@ public static class StartupExtensions
     public static IServiceCollection AddCommunicationApiConsistency(this IServiceCollection services)
     {
         services.AddSingleton<IExceptionMapper, DeterministicExceptionMapper>();
+        services.AddSingleton<IProviderWebhookRequestAuthenticator, MetaProviderWebhookRequestAuthenticator>();
+        services.AddSingleton<IProviderWebhookRequestAuthenticator, TelegramProviderWebhookRequestAuthenticator>();
+        services.AddSingleton<IProviderWebhookAuthorizationService, ProviderWebhookAuthorizationService>();
+        services.Configure<RouteOptions>(options =>
+        {
+            options.ConstraintMap[ProviderWebhookRouting.RouteConstraintName] = typeof(SupportedWebhookProviderRouteConstraint);
+        });
 
         return services;
     }
@@ -97,7 +115,17 @@ public static class StartupExtensions
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            foreach (var permission in CommunicationPermissions.GetAll())
+            {
+                options.AddPolicy(permission, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireAssertion(context => HasPermission(context.User, permission));
+                });
+            }
+        });
 
         return services;
     }
@@ -151,39 +179,97 @@ public static class StartupExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.Configure<CommunicationDependencyHealthCheckOptions>(
+            configuration.GetSection(CommunicationDependencyHealthCheckOptions.SectionName));
+
+        var dependencyTimeout = configuration
+            .GetSection(CommunicationDependencyHealthCheckOptions.SectionName)
+            .GetValue<int?>(nameof(CommunicationDependencyHealthCheckOptions.DependencyTimeoutSeconds));
+
+        var timeout = TimeSpan.FromSeconds(Math.Max(1, dependencyTimeout ?? 5));
+
         services.AddHealthChecks()
             .AddCheck(
                 "communication-api-live",
                 () => HealthCheckResult.Healthy("Communication API process is running."),
                 tags: ["live", "communication"])
-            .AddNpgSql(
-                GetRequiredConnectionString(configuration, "DefaultConnection"),
+            .AddCheck<CommunicationDatabaseHealthCheck>(
                 name: "communication-db",
-                tags: ["ready", "db", "postgres", "communication"])
-            .AddRabbitMQ(
-                sp =>
-                {
-                    var rabbitConfig = configuration.GetSection("RabbitMq");
-                    var factory = new RabbitMQ.Client.ConnectionFactory
-                    {
-                        HostName = rabbitConfig["Host"]!,
-                        Port = int.TryParse(rabbitConfig["Port"], out var port) ? port : 5672,
-                        UserName = rabbitConfig["Username"]!,
-                        Password = rabbitConfig["Password"]!,
-                        VirtualHost = rabbitConfig["VirtualHost"] ?? "/"
-                    };
-
-                    return factory.CreateConnectionAsync().GetAwaiter().GetResult();
-                },
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready", "db", "postgres", "communication"],
+                timeout: timeout)
+            .AddCheck<CommunicationBrokerHealthCheck>(
                 name: "communication-rabbitmq",
-                tags: ["ready", "messaging", "rabbitmq", "communication"]);
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready", "messaging", "rabbitmq", "communication"],
+                timeout: timeout)
+            .AddCheck<CommunicationSecretProviderHealthCheck>(
+                name: "communication-secret-provider",
+                failureStatus: HealthStatus.Unhealthy,
+                tags: ["ready", "security", "secrets", "communication"],
+                timeout: timeout);
 
         return services;
+    }
+
+    public static IEndpointRouteBuilder MapCommunicationHealthEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapHealthChecks("/health", CreateHealthCheckOptions(tag: "live", includeDurations: false));
+        endpoints.MapHealthChecks("/health/live", CreateHealthCheckOptions(tag: "live", includeDurations: false));
+        endpoints.MapHealthChecks("/health/ready", CreateHealthCheckOptions(tag: "ready", includeDurations: true));
+
+        return endpoints;
     }
 
     private static string GetRequiredConnectionString(IConfiguration configuration, string connectionName)
     {
         return configuration.GetConnectionString(connectionName)
             ?? throw new InvalidOperationException($"ConnectionStrings:{connectionName} is missing.");
+    }
+
+    private static HealthCheckOptions CreateHealthCheckOptions(string tag, bool includeDurations)
+    {
+        return new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase),
+            AllowCachingResponses = false,
+            ResultStatusCodes =
+            {
+                [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+                [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+            },
+            ResponseWriter = (context, report) => WriteHealthResponseAsync(context, report, includeDurations)
+        };
+    }
+
+    private static Task WriteHealthResponseAsync(HttpContext context, HealthReport report, bool includeDurations)
+    {
+        context.Response.ContentType = "application/json";
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries
+                .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                .Select(entry => new
+                {
+                    name = entry.Key,
+                    status = entry.Value.Status.ToString(),
+                    description = entry.Value.Description,
+                    durationMs = includeDurations ? entry.Value.Duration.TotalMilliseconds : (double?)null
+                }),
+            totalDurationMs = report.TotalDuration.TotalMilliseconds
+        });
+
+        return context.Response.WriteAsync(payload);
+    }
+
+    private static bool HasPermission(ClaimsPrincipal user, string requiredPermission)
+    {
+        return user.Claims
+            .Where(claim => PermissionClaimTypes.Contains(claim.Type, StringComparer.OrdinalIgnoreCase))
+            .SelectMany(claim => claim.Value.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Contains(requiredPermission, StringComparer.Ordinal);
     }
 }

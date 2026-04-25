@@ -11,13 +11,19 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="MassTransit" Version="8.5.7" />
     <PackageReference Include="MediatR" Version="14.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
   </ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="ZawatSys.MicroLib.Shared" Version="1.0.7" />
+		<PackageReference Include="ZawatSys.Logging" Version="1.0.0" />
+	</ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" />
+    <ProjectReference Include="..\..\..\..\ZawatSys.AI\ZawatSys.MicroLib.AI\ZawatSys.MicroLib.AI.csproj" />
   </ItemGroup>
 
 </Project>

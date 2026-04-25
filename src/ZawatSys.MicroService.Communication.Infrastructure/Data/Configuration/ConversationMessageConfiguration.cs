@@ -170,6 +170,9 @@ public sealed class ConversationMessageConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(e => new { e.ConversationId, e.OccurredAt })
             .HasDatabaseName("IX_ConversationMessages_ConversationId_OccurredAt");
 
+        builder.HasIndex(e => new { e.ConversationId, e.Direction, e.Sequence })
+            .HasDatabaseName("IX_ConversationMessages_ConversationId_Direction_Sequence");
+
         builder.HasIndex(e => new { e.TenantId, e.SenderType, e.OccurredAt })
             .HasDatabaseName("IX_ConversationMessages_Tenant_SenderType_OccurredAt");
 

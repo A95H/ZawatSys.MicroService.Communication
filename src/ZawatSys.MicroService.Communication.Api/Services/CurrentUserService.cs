@@ -8,6 +8,9 @@ namespace ZawatSys.MicroService.Communication.Api.Services;
 /// </summary>
 public sealed class CurrentUserService : ICurrentUserService
 {
+    private static readonly string[] RoleClaimTypes = [ClaimTypes.Role, "role", "roles"];
+    private static readonly string[] PermissionClaimTypes = ["permission", "permissions", "scope", "scp"];
+
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CurrentUserService(IHttpContextAccessor httpContextAccessor)
@@ -68,6 +71,20 @@ public sealed class CurrentUserService : ICurrentUserService
         }
     }
 
+    public IReadOnlyCollection<string> Roles => GetClaimValues(RoleClaimTypes);
+
+    public IReadOnlyCollection<string> Permissions => GetClaimValues(PermissionClaimTypes);
+
+    public bool IsInRole(string role)
+    {
+        return Roles.Contains(role, StringComparer.Ordinal);
+    }
+
+    public bool HasPermission(string permission)
+    {
+        return Permissions.Contains(permission, StringComparer.Ordinal);
+    }
+
     private Guid? FindGuidClaim(params string[] claimTypes)
     {
         var user = _httpContextAccessor.HttpContext?.User;
@@ -86,5 +103,20 @@ public sealed class CurrentUserService : ICurrentUserService
         }
 
         return null;
+    }
+
+    private IReadOnlyCollection<string> GetClaimValues(params string[] claimTypes)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        return user.Claims
+            .Where(claim => claimTypes.Contains(claim.Type, StringComparer.OrdinalIgnoreCase))
+            .SelectMany(claim => claim.Value.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 }

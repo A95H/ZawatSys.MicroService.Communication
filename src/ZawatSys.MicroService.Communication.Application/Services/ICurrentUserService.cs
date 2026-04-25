@@ -14,4 +14,12 @@ public interface ICurrentUserService
     bool IsAuthenticated { get; }
 
     Guid CorrelationId { get; }
+
+    IReadOnlyCollection<string> Roles { get; }
+
+    IReadOnlyCollection<string> Permissions { get; }
+
+    bool IsInRole(string role);
+
+    bool HasPermission(string permission);
 }

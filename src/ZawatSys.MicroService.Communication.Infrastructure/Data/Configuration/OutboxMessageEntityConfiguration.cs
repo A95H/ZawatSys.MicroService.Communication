@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using ZawatSys.MicroLib.Shared.Common.Models;
 
 namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Configuration;
@@ -8,6 +10,15 @@ public sealed class OutboxMessageEntityConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<OutboxMessage> builder)
     {
+        var contentComparer = new ValueComparer<JsonDocument>(
+            (left, right) =>
+                string.Equals(
+                    left == null ? null : left.RootElement.GetRawText(),
+                    right == null ? null : right.RootElement.GetRawText(),
+                    StringComparison.Ordinal),
+            value => value == null ? 0 : value.RootElement.GetRawText().GetHashCode(StringComparison.Ordinal),
+            value => value == null ? null! : JsonDocument.Parse(value.RootElement.GetRawText()));
+
         builder.ToTable("OutboxMessages");
 
         builder.HasKey(om => om.Id);
@@ -18,6 +29,12 @@ public sealed class OutboxMessageEntityConfiguration : IEntityTypeConfiguration<
 
         builder.Property(om => om.Content)
             .IsRequired()
+            .HasConversion(
+                value => value.RootElement.GetRawText(),
+                value => JsonDocument.Parse(value))
+            .Metadata.SetValueComparer(contentComparer);
+
+        builder.Property(om => om.Content)
             .HasColumnType("jsonb");
 
         builder.Property(om => om.OccurredOn)

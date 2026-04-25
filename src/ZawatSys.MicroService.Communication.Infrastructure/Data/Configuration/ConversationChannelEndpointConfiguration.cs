@@ -109,8 +109,10 @@ public sealed class ConversationChannelEndpointConfiguration : IEntityTypeConfig
         builder.HasIndex(e => new { e.TenantId, e.Channel, e.InboundEnabled })
             .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_Channel_InboundEnabled");
 
-        builder.HasIndex(e => new { e.TenantId, e.Channel, e.IsDefault })
-            .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_Channel_IsDefault");
+        builder.HasIndex(e => new { e.TenantId, e.Channel })
+            .IsUnique()
+            .HasFilter("\"IsDefault\" = TRUE AND NOT \"IsDeleted\"")
+            .HasDatabaseName("UX_ConversationChannelEndpoints_Tenant_Channel_Default");
 
         builder.HasIndex(e => new { e.TenantId, e.IsDeleted })
             .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_IsDeleted");

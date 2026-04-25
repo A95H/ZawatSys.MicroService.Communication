@@ -111,6 +111,7 @@ public sealed class ConversationControlConfiguration : IEntityTypeConfiguration<
 
         builder.HasIndex(e => e.ConversationId)
             .IsUnique()
+            .HasFilter("NOT \"IsDeleted\"")
             .HasDatabaseName("UX_ConversationControls_ConversationId");
 
         builder.HasIndex(e => new { e.TenantId, e.Mode, e.ModifiedAt })

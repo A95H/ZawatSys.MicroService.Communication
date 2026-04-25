@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ZawatSys.MicroService.Communication.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:60865;http://localhost:60866"
+    }
+  }
+}

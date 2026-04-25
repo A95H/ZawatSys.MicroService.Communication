@@ -98,7 +98,7 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
                     b.HasIndex("ConversationId", "AssignmentRole")
                         .IsUnique()
                         .HasDatabaseName("UX_ConversationAssignments_ConversationId_AssignmentRole_ActiveOwner")
-                        .HasFilter("\"IsActive\" = TRUE AND \"AssignmentRole\" = 'Owner'");
+                        .HasFilter("\"IsActive\" = TRUE AND \"AssignmentRole\" = 'Owner' AND NOT \"IsDeleted\"");
 
                     b.HasIndex("TenantId", "IsDeleted")
                         .HasDatabaseName("IX_ConversationAssignments_Tenant_IsDeleted");
@@ -208,6 +208,11 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "Channel")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ConversationChannelEndpoints_Tenant_Channel_Default")
+                        .HasFilter("\"IsDefault\" = TRUE AND NOT \"IsDeleted\"");
+
                     b.HasIndex("TenantId", "IsDeleted")
                         .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_IsDeleted");
 
@@ -217,9 +222,6 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasIndex("TenantId", "Channel", "InboundEnabled")
                         .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_Channel_InboundEnabled");
-
-                    b.HasIndex("TenantId", "Channel", "IsDefault")
-                        .HasDatabaseName("IX_ConversationChannelEndpoints_Tenant_Channel_IsDefault");
 
                     b.ToTable("ConversationChannelEndpoints", (string)null);
                 });
@@ -305,7 +307,8 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasIndex("ConversationId")
                         .IsUnique()
-                        .HasDatabaseName("UX_ConversationControls_ConversationId");
+                        .HasDatabaseName("UX_ConversationControls_ConversationId")
+                        .HasFilter("NOT \"IsDeleted\"");
 
                     b.HasIndex("TenantId", "IsDeleted")
                         .HasDatabaseName("IX_ConversationControls_Tenant_IsDeleted");
@@ -403,6 +406,10 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ConversationId", "ControlVersion")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ConversationControlTransitions_ConversationId_ControlVersion");
+
                     b.HasIndex("ConversationId", "OccurredAt")
                         .HasDatabaseName("IX_ConversationControlTransitions_ConversationId_OccurredAt");
 
@@ -419,9 +426,9 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_ConversationControlTransitions_ControlVersion_Positive", "\"ControlVersion\" > 0");
 
-                            t.HasCheckConstraint("CK_ConversationControlTransitions_NewMode", "\"NewMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED', 'RESOLVED')");
+                            t.HasCheckConstraint("CK_ConversationControlTransitions_NewMode", "\"NewMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED')");
 
-                            t.HasCheckConstraint("CK_ConversationControlTransitions_PreviousMode", "\"PreviousMode\" IS NULL OR \"PreviousMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED', 'RESOLVED')");
+                            t.HasCheckConstraint("CK_ConversationControlTransitions_PreviousMode", "\"PreviousMode\" IS NULL OR \"PreviousMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED')");
 
                             t.HasCheckConstraint("CK_ConversationControlTransitions_TriggeredByType", "\"TriggeredByType\" IN ('USER', 'HUMAN', 'AI', 'SYSTEM', 'POLICY')");
                         });
@@ -556,6 +563,9 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasIndex("TenantId", "RelatedPendingActionId")
                         .HasDatabaseName("IX_ConversationMessages_Tenant_RelatedPendingActionId");
+
+                    b.HasIndex("ConversationId", "Direction", "Sequence")
+                        .HasDatabaseName("IX_ConversationMessages_ConversationId_Direction_Sequence");
 
                     b.HasIndex("TenantId", "ConversationChannelEndpointId", "ProviderMessageId")
                         .IsUnique()
@@ -702,7 +712,7 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
                     b.HasIndex("TenantId", "ExternalIdentityBindingId")
                         .IsUnique()
                         .HasDatabaseName("UX_ConversationSessions_Tenant_ExternalIdentityBinding_Active")
-                        .HasFilter("\"ClosedAt\" IS NULL");
+                        .HasFilter("\"ClosedAt\" IS NULL AND NOT \"IsDeleted\"");
 
                     b.HasIndex("TenantId", "IsDeleted")
                         .HasDatabaseName("IX_ConversationSessions_Tenant_IsDeleted");
@@ -841,7 +851,8 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
 
                     b.HasIndex("TenantId", "ConversationChannelEndpointId", "NormalizedExternalUserId")
                         .IsUnique()
-                        .HasDatabaseName("UX_ExternalIdentityBindings_Tenant_Endpoint_NormalizedExternalUserId");
+                        .HasDatabaseName("UX_ExternalIdentityBindings_Tenant_Endpoint_NormalizedExternalUserId")
+                        .HasFilter("NOT \"IsBlocked\" AND NOT \"IsDeleted\"");
 
                     b.HasIndex("TenantId", "EntityType", "EntityId")
                         .HasDatabaseName("IX_ExternalIdentityBindings_Tenant_EntityType_EntityId");
@@ -953,13 +964,14 @@ namespace ZawatSys.MicroService.Communication.Infrastructure.Data.Migrations
                     b.HasIndex("TenantId", "IsDeleted")
                         .HasDatabaseName("IX_MessageDeliveryAttempts_Tenant_IsDeleted");
 
+                    b.HasIndex("TenantId", "NextRetryAt")
+                        .HasDatabaseName("IX_MessageDeliveryAttempts_Tenant_NextRetryAt_PendingRetry")
+                        .HasFilter("NOT \"IsFinal\" AND \"NextRetryAt\" IS NOT NULL");
+
                     b.HasIndex("TenantId", "ConversationChannelEndpointId", "ProviderMessageId")
                         .IsUnique()
                         .HasDatabaseName("UX_MessageDeliveryAttempts_Tenant_Endpoint_ProviderMessageId_NotNull")
                         .HasFilter("\"ProviderMessageId\" IS NOT NULL");
-
-                    b.HasIndex("TenantId", "DeliveryStatus", "NextRetryAt")
-                        .HasDatabaseName("IX_MessageDeliveryAttempts_Tenant_DeliveryStatus_NextRetryAt");
 
                     b.ToTable("MessageDeliveryAttempts", null, t =>
                         {

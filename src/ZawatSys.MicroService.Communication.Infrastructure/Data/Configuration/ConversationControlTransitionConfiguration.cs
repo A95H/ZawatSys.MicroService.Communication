@@ -12,11 +12,11 @@ public sealed class ConversationControlTransitionConfiguration : IEntityTypeConf
         {
             tableBuilder.HasCheckConstraint(
                 "CK_ConversationControlTransitions_NewMode",
-                "\"NewMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED', 'RESOLVED')");
+                "\"NewMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED')");
 
             tableBuilder.HasCheckConstraint(
                 "CK_ConversationControlTransitions_PreviousMode",
-                "\"PreviousMode\" IS NULL OR \"PreviousMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED', 'RESOLVED')");
+                "\"PreviousMode\" IS NULL OR \"PreviousMode\" IN ('AI_ACTIVE', 'HUMAN_ACTIVE', 'AI_PAUSED')");
 
             tableBuilder.HasCheckConstraint(
                 "CK_ConversationControlTransitions_TriggeredByType",
@@ -118,6 +118,10 @@ public sealed class ConversationControlTransitionConfiguration : IEntityTypeConf
 
         builder.HasIndex(e => new { e.ConversationId, e.OccurredAt })
             .HasDatabaseName("IX_ConversationControlTransitions_ConversationId_OccurredAt");
+
+        builder.HasIndex(e => new { e.ConversationId, e.ControlVersion })
+            .IsUnique()
+            .HasDatabaseName("UX_ConversationControlTransitions_ConversationId_ControlVersion");
 
         builder.HasIndex(e => new { e.TenantId, e.NewMode, e.OccurredAt })
             .HasDatabaseName("IX_ConversationControlTransitions_Tenant_NewMode_OccurredAt");

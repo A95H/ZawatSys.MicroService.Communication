@@ -1,7 +1,7 @@
-using System.Text.Json;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using ZawatSys.MicroService.Communication.Api.Extensions;
 using ZawatSys.MicroService.Communication.Api.Middlewares;
+using ZawatSys.MicroService.Communication.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +12,27 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddSwaggerWithJwt();
 
 var app = builder.Build();
+
+// Apply database migrations automatically on startup.
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var dbContext = services.GetRequiredService<CommunicationDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation("Applying Communication database migrations...");
+        dbContext.Database.Migrate();
+        logger.LogInformation("Communication database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the Communication database.");
+        throw;
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -30,50 +51,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("live"),
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-        var payload = JsonSerializer.Serialize(new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(entry => new
-            {
-                name = entry.Key,
-                status = entry.Value.Status.ToString(),
-                description = entry.Value.Description
-            }),
-            totalDurationMs = report.TotalDuration.TotalMilliseconds
-        });
-
-        await context.Response.WriteAsync(payload);
-    }
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready"),
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-        var payload = JsonSerializer.Serialize(new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(entry => new
-            {
-                name = entry.Key,
-                status = entry.Value.Status.ToString(),
-                description = entry.Value.Description,
-                durationMs = entry.Value.Duration.TotalMilliseconds
-            }),
-            totalDurationMs = report.TotalDuration.TotalMilliseconds
-        });
-
-        await context.Response.WriteAsync(payload);
-    }
-});
+app.MapCommunicationHealthEndpoints();
 
 app.Run();
 

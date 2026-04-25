@@ -137,6 +137,7 @@ public sealed class ExternalIdentityBindingConfiguration : IEntityTypeConfigurat
 
         builder.HasIndex(e => new { e.TenantId, e.ConversationChannelEndpointId, e.NormalizedExternalUserId })
             .IsUnique()
+            .HasFilter("NOT \"IsBlocked\" AND NOT \"IsDeleted\"")
             .HasDatabaseName("UX_ExternalIdentityBindings_Tenant_Endpoint_NormalizedExternalUserId");
 
         builder.HasIndex(e => new { e.TenantId, e.ContactId })

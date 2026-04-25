@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using ZawatSys.MicroLib.Communication.Domain.Entities;
 using ZawatSys.MicroLib.Shared.Common.Models;
+using ZawatSys.MicroService.Communication.Application.Abstractions;
 
 namespace ZawatSys.MicroService.Communication.Infrastructure.Data;
 
-public sealed class CommunicationDbContext : DbContext
+public sealed class CommunicationDbContext : DbContext, ICommunicationDbContext
 {
     public CommunicationDbContext(DbContextOptions<CommunicationDbContext> options)
         : base(options)

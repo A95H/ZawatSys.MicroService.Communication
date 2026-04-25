@@ -1,6 +1,8 @@
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ZawatSys.MicroLib.AI.Domain.Commands;
+using ZawatSys.MicroLib.Shared.Contracts.Common;
 
 namespace ZawatSys.MicroService.Communication.Infrastructure.Extensions;
 
@@ -25,6 +27,7 @@ public static class MassTransitExtensions
         {
             x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter(CommunicationQueuePrefix, false));
             x.AddConsumers(typeof(MassTransitExtensions).Assembly);
+            x.AddRequestClient<PlatformIntegrationCommand<ProcessConversationTurnIntegrationCmd>>(RequestTimeout.After(s: requestTimeoutSeconds));
 
             x.UsingRabbitMq((context, cfg) =>
             {

@@ -131,8 +131,9 @@ public sealed class MessageDeliveryAttemptConfiguration : IEntityTypeConfigurati
             .IsUnique()
             .HasDatabaseName("UX_MessageDeliveryAttempts_ConversationMessageId_AttemptNumber");
 
-        builder.HasIndex(e => new { e.TenantId, e.DeliveryStatus, e.NextRetryAt })
-            .HasDatabaseName("IX_MessageDeliveryAttempts_Tenant_DeliveryStatus_NextRetryAt");
+        builder.HasIndex(e => new { e.TenantId, e.NextRetryAt })
+            .HasFilter("NOT \"IsFinal\" AND \"NextRetryAt\" IS NOT NULL")
+            .HasDatabaseName("IX_MessageDeliveryAttempts_Tenant_NextRetryAt_PendingRetry");
 
         builder.HasIndex(e => new { e.TenantId, e.ConversationChannelEndpointId, e.ProviderMessageId })
             .IsUnique()

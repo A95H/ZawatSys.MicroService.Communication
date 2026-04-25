@@ -110,7 +110,7 @@ public sealed class ConversationAssignmentConfiguration : IEntityTypeConfigurati
 
         builder.HasIndex(e => new { e.ConversationId, e.AssignmentRole })
             .IsUnique()
-            .HasFilter("\"IsActive\" = TRUE AND \"AssignmentRole\" = 'Owner'")
+            .HasFilter("\"IsActive\" = TRUE AND \"AssignmentRole\" = 'Owner' AND NOT \"IsDeleted\"")
             .HasDatabaseName("UX_ConversationAssignments_ConversationId_AssignmentRole_ActiveOwner");
 
         builder.HasIndex(e => new { e.TenantId, e.AssignedToUserId, e.IsActive })

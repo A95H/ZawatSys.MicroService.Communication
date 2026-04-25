@@ -1,6 +1,8 @@
+using FluentValidation;
 using ZawatSys.MicroLib.Communication.Licensing;
 using ZawatSys.MicroLib.Communication.MessageCodes;
 using ZawatSys.MicroLib.Shared.Common;
+using ZawatSys.MicroService.Communication.Application.Webhooks;
 
 namespace ZawatSys.MicroService.Communication.Api.Exceptions;
 
@@ -17,6 +19,7 @@ public sealed class DeterministicExceptionMapper : IExceptionMapper
         {
             TryMapValidation,
             TryMapNotFound,
+            TryMapReplayRejected,
             TryMapStaleControlConflict,
             TryMapIdempotencyConflict,
             TryMapConflict,
@@ -45,6 +48,18 @@ public sealed class DeterministicExceptionMapper : IExceptionMapper
 
     private static ExceptionMappingResult? TryMapValidation(Exception exception)
     {
+        if (exception is ValidationException validationException)
+        {
+            return new ExceptionMappingResult(
+                StatusCode: StatusCodes.Status400BadRequest,
+                MsgCode: MessageCodes.VALIDATION_FAILED,
+                Title: "Validation Failed",
+                Details: "One or more validation errors occurred.",
+                Errors: validationException.Errors
+                    .Select(error => $"{error.PropertyName}: {error.ErrorMessage}")
+                    .ToArray());
+        }
+
         if (exception is ArgumentException or FormatException)
         {
             return new ExceptionMappingResult(
@@ -101,12 +116,29 @@ public sealed class DeterministicExceptionMapper : IExceptionMapper
 
     private static ExceptionMappingResult? TryMapStaleControlConflict(Exception exception)
     {
-        if (exception is StaleControlConflictException)
+        if (exception is StaleControlConflictException
+            || string.Equals(exception.GetType().Name, "StaleControlConflictException", StringComparison.Ordinal))
         {
             return new ExceptionMappingResult(
                 StatusCode: StatusCodes.Status409Conflict,
                 MsgCode: CommunicationMessageCodes.STALE_CONTROL_CONFLICT,
                 Title: "Stale Control Conflict",
+                Details: exception.Message,
+                Errors: Array.Empty<string>());
+        }
+
+        return null;
+    }
+
+    private static ExceptionMappingResult? TryMapReplayRejected(Exception exception)
+    {
+        if (exception is ProviderWebhookReplayRejectedException
+            || string.Equals(exception.GetType().Name, nameof(ProviderWebhookReplayRejectedException), StringComparison.Ordinal))
+        {
+            return new ExceptionMappingResult(
+                StatusCode: StatusCodes.Status409Conflict,
+                MsgCode: CommunicationMessageCodes.REPLAY_REJECTED,
+                Title: "Replay Rejected",
                 Details: exception.Message,
                 Errors: Array.Empty<string>());
         }
