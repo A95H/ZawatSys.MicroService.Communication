@@ -17,8 +17,8 @@
   </ItemGroup>
 	
 	<ItemGroup>
-		<PackageReference Include="ZawatSys.MicroLib.Shared" Version="1.0.8" />
-		<PackageReference Include="ZawatSys.MicroLib.Communication" Version="1.0.1" />
+		<PackageReference Include="ZawatSys.MicroLib.Shared" Version="1.0.7" />
+		<PackageReference Include="ZawatSys.MicroLib.Communication" Version="1.0.0" />
 		<PackageReference Include="ZawatSys.MicroLib.AI" Version="1.0.1" />
 		<PackageReference Include="ZawatSys.Logging" Version="1.0.0" />
 	</ItemGroup>

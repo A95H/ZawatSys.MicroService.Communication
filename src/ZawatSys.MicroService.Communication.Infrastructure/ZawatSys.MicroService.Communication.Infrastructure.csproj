@@ -20,10 +20,11 @@
 	<ItemGroup>
 		<PackageReference Include="ZawatSys.MicroLib.Shared" Version="1.0.7" />
 		<PackageReference Include="ZawatSys.Logging" Version="1.0.0" />
+    <PackageReference Include="ZawatSys.MicroLib.Communication" Version="1.0.0" />
 	</ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" />
+    <!-- <ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" /> -->
     <ProjectReference Include="..\ZawatSys.MicroService.Communication.Application\ZawatSys.MicroService.Communication.Application.csproj" />
     <ProjectReference Include="..\..\..\..\ZawatSys.AI\ZawatSys.MicroLib.AI\ZawatSys.MicroLib.AI.csproj" />
   </ItemGroup>
