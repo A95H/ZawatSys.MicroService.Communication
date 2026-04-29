@@ -1,0 +1,31 @@
+services:
+  communication-service:
+    image: ghcr.io/a95h/zawatsys-communication-service:1.0.0
+    container_name: zawatsys-communication-service
+    restart: always
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      # RabbitMQ Configuration
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: admin
+      RabbitMq__Password: adminpassword
+
+      # JWT Configuration
+      Jwt__Key: ThisIsAVerySecureKeyForJWTTokenGeneration12345
+      Jwt__Issuer: ZawatSys.MicroService.Communication.Service
+      Jwt__Audience: ZawatSys.MicroService.Communication.Service
+      Jwt__ExpirationMinutes: 3600
+
+      # Database Configuration
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=ZawatSys.Communication;Username=appdb;Password=strongpassword
+      ConnectionStrings__SharedConnection: Host=postgres;Port=5432;Database=ZawatSys.Shared;Username=appdb;Password=strongpassword
+      ConnectionStrings__ReadModel: Host=postgres;Port=5432;Database=ZawatSys.ReadModel.Communication;Username=appdb;Password=strongpassword
+
+    networks:
+      - zawatsys-net
+
+networks:
+  zawatsys-net:
+    external: true
