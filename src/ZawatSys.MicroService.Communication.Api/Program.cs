@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using ZawatSys.MicroService.Communication.Api.Extensions;
 using ZawatSys.MicroService.Communication.Api.Middlewares;
 using ZawatSys.MicroService.Communication.Infrastructure.Data;
+using ZawatSys.MicroLib.Shared.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddZawatObservability("Communication");
 
 builder.Services.AddControllers();
 builder.Services.AddCommunicationMicroHost(builder.Configuration, builder.Environment);
