@@ -17,14 +17,16 @@
     </PackageReference>
     <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-    <ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- <ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" /> -->
     <ProjectReference Include="..\ZawatSys.MicroService.Communication.Application\ZawatSys.MicroService.Communication.Application.csproj" />
     <ProjectReference Include="..\ZawatSys.MicroService.Communication.Infrastructure\ZawatSys.MicroService.Communication.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\..\ZawatSys.MicroLib.Shared\ZawatSys.MicroLib.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ZawatSys.MicroLib.Communication" Version="2.0.0" />
+    <PackageReference Include="ZawatSys.MicroLib.Shared" Version="2.0.0" />
+  </ItemGroup>
 </Project>

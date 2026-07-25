@@ -29,9 +29,9 @@ jobs:
           docker build \
             --build-arg NUGET_AUTH_TOKEN=${{ secrets.NUGET_AUTH_TOKEN }} \
             -f src/ZawatSys.MicroService.Communication.Api/Dockerfile \
-            -t ghcr.io/a95h/zawatsys-communication-service:1.0.0 \
+            -t ghcr.io/a95h/zawatsys-communication-service:2.0.0 \
             .
 
       - name: Push API Docker image
         run: |
-          docker push ghcr.io/a95h/zawatsys-communication-service:1.0.0
+          docker push ghcr.io/a95h/zawatsys-communication-service:2.0.0

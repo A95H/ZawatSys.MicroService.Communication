@@ -18,8 +18,6 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\ZawatSys.MicroLib.Shared\ZawatSys.MicroLib.Shared.csproj" />
-		<ProjectReference Include="..\..\..\ZawatSys.MicroLib.Communication\ZawatSys.MicroLib.Communication.csproj" />
-		<ProjectReference Include="..\..\..\..\ZawatSys.AI\ZawatSys.MicroLib.AI\ZawatSys.MicroLib.AI.csproj" />
 	</ItemGroup>
 
   <!-- <ItemGroup>
@@ -27,4 +25,8 @@
     <ProjectReference Include="..\..\..\..\ZawatSys.AI\ZawatSys.MicroLib.AI\ZawatSys.MicroLib.AI.csproj" />
   </ItemGroup> -->
 
+  <ItemGroup>
+    <PackageReference Include="ZawatSys.MicroLib.AI" Version="2.0.0" />
+    <PackageReference Include="ZawatSys.MicroLib.Communication" Version="2.0.0" />
+  </ItemGroup>
 </Project>
