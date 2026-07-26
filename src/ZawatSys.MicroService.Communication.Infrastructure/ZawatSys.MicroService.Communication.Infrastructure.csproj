@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZawatSys.MicroLib.AI" Version="2.0.0" />
+    <PackageReference Include="ZawatSys.MicroLib.AI" Version="2.0.1" />
     <PackageReference Include="ZawatSys.MicroLib.Communication" Version="2.0.0" />
   </ItemGroup>
 </Project>
