@@ -64,7 +64,6 @@ _ReSharper*/
 # User secrets
 **/appsettings.*.json
 !**/appsettings.json
-!**/appsettings.Development.json
 secrets.json
 
 # Database
