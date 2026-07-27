@@ -5,6 +5,7 @@ using ZawatSys.MicroService.Communication.Infrastructure.Data;
 using ZawatSys.MicroLib.Shared.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddZawatFileLogger(builder.Configuration);
 builder.AddZawatObservability("Communication");
 
 builder.Services.AddControllers();
