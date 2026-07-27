@@ -1,5 +1,6 @@
 // Persistent rolling-file logger (in addition to console/OTel).
 // Self-contained ILoggerProvider so it captures ALL Microsoft.Extensions.Logging output.
+// Writes every entry to log-<date>.log, and Error+ entries also to errors-<date>.log.
 // Declared in the Microsoft.Extensions.Logging namespace so builder.Logging.AddZawatFileLogger()
 // resolves via ImplicitUsings without extra using directives.
 using System.Collections.Concurrent;
@@ -10,55 +11,40 @@ namespace Microsoft.Extensions.Logging;
 
 public sealed class ZawatFileLoggerProvider : ILoggerProvider
 {
-    private readonly string _dir;
-    private readonly long _maxBytes;
-    private readonly BlockingCollection<string> _queue = new(new ConcurrentQueue<string>());
+    private readonly LogLevel _errorLevel;
+    private readonly BlockingCollection<(string Line, bool IsError)> _queue = new(new ConcurrentQueue<(string, bool)>());
     private readonly Task _worker;
-    private string _file = "";
-    private long _size;
+    private readonly RollingFile _all;
+    private readonly RollingFile _errors;
 
-    public ZawatFileLoggerProvider(string dir, int maxFileSizeMb = 100)
+    public ZawatFileLoggerProvider(string dir, int maxFileSizeMb = 100, LogLevel errorLevel = LogLevel.Error)
     {
-        _dir = dir;
-        _maxBytes = maxFileSizeMb * 1024L * 1024L;
-        Directory.CreateDirectory(_dir);
+        Directory.CreateDirectory(dir);
+        _errorLevel = errorLevel;
+        _all = new RollingFile(dir, "log", maxFileSizeMb);
+        _errors = new RollingFile(dir, "errors", maxFileSizeMb);
         _worker = Task.Run(ProcessQueue);
     }
 
     public ILogger CreateLogger(string categoryName) => new FileLogger(categoryName, this);
 
-    internal void Enqueue(string line)
+    internal LogLevel ErrorLevel => _errorLevel;
+
+    internal void Enqueue(string line, bool isError)
     {
-        if (!_queue.IsAddingCompleted) _queue.Add(line);
+        if (!_queue.IsAddingCompleted) _queue.Add((line, isError));
     }
 
     private void ProcessQueue()
     {
-        foreach (var line in _queue.GetConsumingEnumerable())
+        foreach (var (line, isError) in _queue.GetConsumingEnumerable())
         {
             try
             {
-                Roll(line.Length + 1);
-                File.AppendAllText(_file, line + Environment.NewLine);
-                _size += line.Length + 1;
+                _all.Append(line);
+                if (isError) _errors.Append(line);
             }
             catch { /* never let logging crash the app */ }
-        }
-    }
-
-    private void Roll(int incoming)
-    {
-        var daily = Path.Combine(_dir, $"log-{DateTime.UtcNow:yyyy-MM-dd}.log");
-        if (_file != daily)
-        {
-            _file = daily;
-            _size = File.Exists(_file) ? new FileInfo(_file).Length : 0;
-        }
-        if (_size + incoming > _maxBytes)
-        {
-            var rolled = Path.Combine(_dir, $"log-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.log");
-            try { if (File.Exists(_file)) File.Move(_file, rolled); } catch { }
-            _size = 0;
         }
     }
 
@@ -66,6 +52,33 @@ public sealed class ZawatFileLoggerProvider : ILoggerProvider
     {
         _queue.CompleteAdding();
         try { _worker.Wait(TimeSpan.FromSeconds(5)); } catch { }
+    }
+
+    // One rolling target: daily file with size-based rotation.
+    private sealed class RollingFile(string dir, string prefix, int maxFileSizeMb)
+    {
+        private readonly long _maxBytes = maxFileSizeMb * 1024L * 1024L;
+        private string _file = "";
+        private long _size;
+
+        public void Append(string line)
+        {
+            var daily = Path.Combine(dir, $"{prefix}-{DateTime.UtcNow:yyyy-MM-dd}.log");
+            if (_file != daily)
+            {
+                _file = daily;
+                _size = File.Exists(_file) ? new FileInfo(_file).Length : 0;
+            }
+            var bytes = line.Length + Environment.NewLine.Length;
+            if (_size + bytes > _maxBytes)
+            {
+                var rolled = Path.Combine(dir, $"{prefix}-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.log");
+                try { if (File.Exists(_file)) File.Move(_file, rolled); } catch { }
+                _size = 0;
+            }
+            File.AppendAllText(_file, line + Environment.NewLine);
+            _size += bytes;
+        }
     }
 
     private sealed class FileLogger(string category, ZawatFileLoggerProvider provider) : ILogger
@@ -83,19 +96,24 @@ public sealed class ZawatFileLoggerProvider : ILoggerProvider
                 .Append(DateTime.UtcNow.ToString("O")).Append(" [").Append(logLevel).Append("] ")
                 .Append(category).Append(" - ").Append(formatter(state, exception));
             if (exception is not null) sb.Append(Environment.NewLine).Append(exception);
-            provider.Enqueue(sb.ToString());
+            provider.Enqueue(sb.ToString(), logLevel >= provider.ErrorLevel);
         }
     }
 }
 
 public static class ZawatFileLoggerExtensions
 {
-    /// <summary>Writes all logs to rolling files (default /app/logs, override via Logging:File:Directory).</summary>
+    /// <summary>
+    /// Writes all logs to rolling files (default /app/logs, override via Logging:File:Directory).
+    /// Error+ entries are additionally written to errors-&lt;date&gt;.log (threshold via Logging:File:ErrorLevel).
+    /// </summary>
     public static ILoggingBuilder AddZawatFileLogger(this ILoggingBuilder builder, IConfiguration configuration)
     {
         var dir = configuration["Logging:File:Directory"] ?? "/app/logs";
         var maxMb = int.TryParse(configuration["Logging:File:MaxFileSizeMb"], out var m) ? m : 100;
-        builder.AddProvider(new ZawatFileLoggerProvider(dir, maxMb));
+        var errorLevel = Enum.TryParse<LogLevel>(configuration["Logging:File:ErrorLevel"], ignoreCase: true, out var lvl)
+            ? lvl : LogLevel.Error;
+        builder.AddProvider(new ZawatFileLoggerProvider(dir, maxMb, errorLevel));
         return builder;
     }
 }
